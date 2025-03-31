@@ -1,0 +1,48 @@
+"""
+Fix for IsADirectoryError preventing Marathi WX CRF POS Tagger from loading model
+
+Problem:
+The CRF Part-of-Speech (POS) tagger for Marathi language with WX encoding was failing
+to load the model, resulting in an IsADirectoryError. The traceback indicated that
+the script was attempting to open a directory as a file at the expected path:
+/home/asr/indic_tagger/models/mr/crf.pos.wx.model
+
+Cause:
+The trained model file was located within a subdirectory named crf.pos.wx.model
+inside the models/mr/ directory. The load_model() function was constructing the
+model path to the directory itself, rather than the actual model file within it.
+
+Solution:
+The load_model() function in tagger/src/algorithm/CRF.py needs to be modified to
+correctly construct the path to the model file. Assuming the model file is named
+model.bin within the subdirectory, the following change should be implemented:
+
+Original code (incorrect):
+self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model')
+
+Modified code (correct):
+self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model', 'model.bin')
+
+Testing:
+After applying this modification, the prediction script for Marathi WX POS tagging
+should run successfully. For example, processing the input "मराठी भाषा आहे ."
+produces the following output:
+
+मराठी	_NN
+भाषा	_NN
+आहे	_VAUX
+.	_PUNC
+
+Recommendation:
+It is recommended that the repository maintainers either:
+
+1. Restructure the model file storage: Move the actual model files directly into the
+   expected directory (e.g., /home/asr/indic_tagger/models/mr/crf.pos.wx.model) and
+   remove the redundant subdirectory.
+2. Update the code for path construction: Maintain the subdirectory structure and
+   update the load_model() function to dynamically locate the model file within
+   the subdirectory, rather than hardcoding a specific filename.
+
+This file describes the fix for the IsADirectoryError encountered with the
+Marathi WX CRF POS tagger.
+"""
