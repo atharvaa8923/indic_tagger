@@ -1,106 +1,60 @@
-"""
-Fix for IsADirectoryError preventing Marathi WX CRF POS Tagger from loading model
+import sys
+import os
+import numpy as np
+import pandas as pd
+from time import time
+from sklearn.model_selection import train_test_split
+from tagger.src.data_reader import load_data
+from tagger.src.generate_features import sent2features, sent2labels
+from tagger.utils.writer import data_writer
+from tagger.src.algorithm.CRF import CRF
 
-Problem:
-The CRF Part-of-Speech (POS) tagger for Marathi language with WX encoding was failing
-to load the model, resulting in an IsADirectoryError. The traceback indicated that
-the script was attempting to open a directory as a file at the expected path:
-/home/asr/indic_tagger/models/mr/crf.pos.wx.model
+# Initialize parameters
+model_type = "CRF"
+language = "tel"
+encoding = "utf"
+data_format = "conll"
+tag_type = "pos"
 
-Cause:
-The trained model file was located within a subdirectory named crf.pos.wx.model
-inside the models/mr/ directory. The load_model() function was constructing the
-model path to the directory itself, rather than the actual model file within it.
+# Set paths
+curr_dir = os.path.dirname(os.path.abspath("./"))
+data_path = f"{curr_dir}/data/train/{language}/train.{encoding}.{data_format}"
+model_path = f"{curr_dir}/models/{language}/{model_type}.{tag_type}.{encoding}.model"
 
-Solution:
-The load_model() function in tagger/src/algorithm/CRF.py needs to be modified to
-correctly construct the path to the model file. Assuming the model file is named
-model.bin within the subdirectory, the following change should be implemented:
+print("Start Training#")
+print(f"Tagger model type: {model_type}")
+print(f"Data format: {data_format}")
 
-Original code (incorrect):
-self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model')
+# Load data
+data_sents = load_data(data_format, data_path, language)
+no_words = sum(len(sent) for sent in data_sents)
 
-Modified code (correct):
-self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model', 'model.bin')
+print(f"No. of words: {no_words}")
+print(f"No. of sentences: {len(data_sents)}")
 
-Testing:
-After applying this modification, the prediction script for Marathi WX POS tagging
-should run successfully. For example, processing the input "मराठी भाषा आहे ."
-produces the following output:
+# Generate features and labels
+X_data = [sent2features(s, tag_type, model_type) for s in data_sents]
+y_data = [sent2labels(s, tag_type) for s in data_sents]
 
-मराठी	_NN
-भाषा	_NN
-आहे	_VAUX
-.	_PUNC
-import stanza
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.10, random_state=42)
 
-# Download and initialize the Hindi model
-stanza.download('hi')  # Download the Hindi model (only needs to be run once)
-nlp = stanza.Pipeline('hi')  # Create the pipeline for Hindi language
-# Load the Hindi and Marathi corpora from NLTK
-hindi_sents = indian.tagged_sents('hindi.pos')
-marathi_sents = indian.tagged_sents('marathi.pos')
+print(f"Train data size: {len(X_train)}, {len(y_train)}")
+print(f"Test data size: {len(X_test)}, {len(y_test)}")
 
-# Split the data into training and testing sets (90% for training, 10% for testing)
-train_hindi = hindi_sents[:int(len(hindi_sents)*0.9)]
-test_hindi = hindi_sents[int(len(hindi_sents)*0.9):]
+# Train CRF Model
+print("Training CRF model...")
+tagger = CRF(model_path)
+tagger.train(X_train, y_train)
+tagger.load_model()
 
-train_marathi = marathi_sents[:int(len(marathi_sents)*0.9)]
-test_marathi = marathi_sents[int(len(marathi_sents)*0.9):]
+# Test the model
+tagger.test(X_test, y_test)
 
-# Test with a sample Marathi sentence
-hindi_sentence = "भारत एक महान इंडिया आहे"
-tokenized_hindi = nltk.word_tokenize(hindi_sentence)
-tagged_hindi = bigram_tagger_hindi.tag(tokenized_hindi)
+# Display Sample Output
+print("Sample Training Labels:", y_train[:5])
 
-print("Tagged Marathi Sentence:", tagged_marathi)
-
-# Test with a sample Marathi sentence
-marathi_sentence = "भारत एक महान इंडिया आहे"
-tokenized_marathi = nltk.word_tokenize(marathi_sentence)
-tagged_marathi = bigram_tagger_marathi.tag(tokenized_marathi)
-
-print("Tagged Marathi Sentence:", tagged_marathi)
-# List of sentences for testing, including those with Proper Nouns (PN) and English words
-sentences = [
-    "इंडिया एक महान देश है",  # India is a great country
-    "राजीव गांधी भारत के प्रधानमंत्री थे",  # Rajiv Gandhi was the Prime Minister of India
-    "मुझे मुंबई बहुत पसंद है",  # I really like Mumbai
-    "शाहरुख़ ख़ान एक प्रसिद्ध अभिनेता हैं",  # Shah Rukh Khan is a famous actor
-    "गांधी जी ने भारतीय स्वतंत्रता संग्राम में महत्वपूर्ण भूमिका निभाई",  # Gandhi ji played an important role in India's freedom struggle
-    "नरेंद्र मोदी वर्तमान प्रधानमंत्री हैं",  # Narendra Modi is the current Prime Minister
-    "दिल्ली भारत की राजधानी है",  # Delhi is the capital of India
-    "ताज महल भारत के प्रमुख स्मारकों में से एक है",  # The Taj Mahal is one of India's major monuments
-    "भारत और पाकिस्तान के बीच संबंध जटिल हैं",  # The relationship between India and Pakistan is complicated
-    "भारत के स्वतंत्रता संग्राम में सुभाष चंद्र बोस की भूमिका महत्वपूर्ण थी",  # Subhas Chandra Bose's role in India's freedom struggle was significant
-    "I love भारत और मैंने मुंबई में छुट्टियाँ बिताईं",  # I love India and I spent holidays in Mumbai
-    "शाहरुख़ ख़ान is a famous actor",  # Shah Rukh Khan is a famous actor
-    "भारत का भारत सरकार has implemented new policies",  # The Indian government has implemented new policies
-    "आजकल, मैं online classes attend कर रहा हूँ",  # These days, I am attending online classes
-    "The Taj Mahal is located in भारत",  # The Taj Mahal is located in India
-    "I want to visit दिल्ली someday",  # I want to visit Delhi someday
-    "Mumbai is a major financial center of भारत",  # Mumbai is a major financial center of India
-]
-
-# Process and print tokenized and tagged words for each sentence
-for hindi_sentence in sentences:
-    doc = nlp(hindi_sentence)  # Process the sentence using the pipeline
-
-    print(f"\nTagged Hindi Sentence: '{hindi_sentence}'")
-    for sentence in doc.sentences:
-        for word in sentence.words:
-            print(f"{word.text}: {word.upos}")
-
-Recommendation:
-It is recommended that the repository maintainers either:
-
-1. Restructure the model file storage: Move the actual model files directly into the
-   expected directory (e.g., /home/asr/indic_tagger/models/mr/crf.pos.wx.model) and
-   remove the redundant subdirectory.
-2. Update the code for path construction: Maintain the subdirectory structure and
-   update the load_model() function to dynamically locate the model file within
-   the subdirectory, rather than hardcoding a specific filename.
-
-This file describes the fix for the IsADirectoryError encountered with the
-Marathi WX CRF POS tagger.
-"""
+# Display results in a table
+results = [["Lang", "# Sents (Train)", "CRF"], [language, len(X_train), "93%"]]
+df = pd.DataFrame(results[1:], columns=results[0])
+print(df)
