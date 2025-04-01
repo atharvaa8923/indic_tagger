@@ -25,10 +25,14 @@ import os
 class CRF:
     # ... other methods ...
 
+ import os
+
+class CRF:
+    # ... other methods ...
+
     def load_model(self):
         self.model_dir = os.path.join(self.root, 'models', self.lang)
-        # Assuming the model file is named 'model.bin' inside the directory
-        self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model', 'model.bin')
+        self.model_path = os.path.join(self.model_dir, 'crf', self.tag_type, self.format + '.model')
         try:
             self.tagger.open(self.model_path)
         except Exception as e:
