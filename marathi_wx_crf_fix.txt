@@ -32,6 +32,64 @@ produces the following output:
 भाषा	_NN
 आहे	_VAUX
 .	_PUNC
+import stanza
+
+# Download and initialize the Hindi model
+stanza.download('hi')  # Download the Hindi model (only needs to be run once)
+nlp = stanza.Pipeline('hi')  # Create the pipeline for Hindi language
+# Load the Hindi and Marathi corpora from NLTK
+hindi_sents = indian.tagged_sents('hindi.pos')
+marathi_sents = indian.tagged_sents('marathi.pos')
+
+# Split the data into training and testing sets (90% for training, 10% for testing)
+train_hindi = hindi_sents[:int(len(hindi_sents)*0.9)]
+test_hindi = hindi_sents[int(len(hindi_sents)*0.9):]
+
+train_marathi = marathi_sents[:int(len(marathi_sents)*0.9)]
+test_marathi = marathi_sents[int(len(marathi_sents)*0.9):]
+
+# Test with a sample Marathi sentence
+hindi_sentence = "भारत एक महान इंडिया आहे"
+tokenized_hindi = nltk.word_tokenize(hindi_sentence)
+tagged_hindi = bigram_tagger_hindi.tag(tokenized_hindi)
+
+print("Tagged Marathi Sentence:", tagged_marathi)
+
+# Test with a sample Marathi sentence
+marathi_sentence = "भारत एक महान इंडिया आहे"
+tokenized_marathi = nltk.word_tokenize(marathi_sentence)
+tagged_marathi = bigram_tagger_marathi.tag(tokenized_marathi)
+
+print("Tagged Marathi Sentence:", tagged_marathi)
+# List of sentences for testing, including those with Proper Nouns (PN) and English words
+sentences = [
+    "इंडिया एक महान देश है",  # India is a great country
+    "राजीव गांधी भारत के प्रधानमंत्री थे",  # Rajiv Gandhi was the Prime Minister of India
+    "मुझे मुंबई बहुत पसंद है",  # I really like Mumbai
+    "शाहरुख़ ख़ान एक प्रसिद्ध अभिनेता हैं",  # Shah Rukh Khan is a famous actor
+    "गांधी जी ने भारतीय स्वतंत्रता संग्राम में महत्वपूर्ण भूमिका निभाई",  # Gandhi ji played an important role in India's freedom struggle
+    "नरेंद्र मोदी वर्तमान प्रधानमंत्री हैं",  # Narendra Modi is the current Prime Minister
+    "दिल्ली भारत की राजधानी है",  # Delhi is the capital of India
+    "ताज महल भारत के प्रमुख स्मारकों में से एक है",  # The Taj Mahal is one of India's major monuments
+    "भारत और पाकिस्तान के बीच संबंध जटिल हैं",  # The relationship between India and Pakistan is complicated
+    "भारत के स्वतंत्रता संग्राम में सुभाष चंद्र बोस की भूमिका महत्वपूर्ण थी",  # Subhas Chandra Bose's role in India's freedom struggle was significant
+    "I love भारत और मैंने मुंबई में छुट्टियाँ बिताईं",  # I love India and I spent holidays in Mumbai
+    "शाहरुख़ ख़ान is a famous actor",  # Shah Rukh Khan is a famous actor
+    "भारत का भारत सरकार has implemented new policies",  # The Indian government has implemented new policies
+    "आजकल, मैं online classes attend कर रहा हूँ",  # These days, I am attending online classes
+    "The Taj Mahal is located in भारत",  # The Taj Mahal is located in India
+    "I want to visit दिल्ली someday",  # I want to visit Delhi someday
+    "Mumbai is a major financial center of भारत",  # Mumbai is a major financial center of India
+]
+
+# Process and print tokenized and tagged words for each sentence
+for hindi_sentence in sentences:
+    doc = nlp(hindi_sentence)  # Process the sentence using the pipeline
+
+    print(f"\nTagged Hindi Sentence: '{hindi_sentence}'")
+    for sentence in doc.sentences:
+        for word in sentence.words:
+            print(f"{word.text}: {word.upos}")
 
 Recommendation:
 It is recommended that the repository maintainers either:
